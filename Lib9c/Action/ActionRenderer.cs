@@ -41,7 +41,7 @@ namespace Nekoyume.Action
         {
             if (action is NCAction polymorphicAction)
             {
-                _actionRenderSubject.OnNext(new ActionBase.ActionEvaluation<ActionBase>()
+                RenderAction(new ActionEvaluation<ActionBase>()
                 {
                     Action = polymorphicAction.InnerAction,
                     Signer = context.Signer,
@@ -196,5 +196,10 @@ namespace Nekoyume.Action
         public IObservable<(NCBlock OldTip, NCBlock NewTip, NCBlock Branchpoint)>
         EveryReorg() =>
             _reorgSubject.AsObservable();
+
+        public void RenderAction(ActionEvaluation<ActionBase> ev)
+        {
+            _actionRenderSubject.OnNext(ev);
+        }
     }
 }
