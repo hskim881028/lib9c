@@ -10,6 +10,7 @@ using Bencodex.Types;
 using Libplanet;
 using Libplanet.Action;
 using Nekoyume.Model.Item;
+using Nekoyume.Model.Stat;
 using Nekoyume.Model.State;
 using Nekoyume.TableData;
 using Serilog;
@@ -100,6 +101,7 @@ namespace Nekoyume.Action
             {
                 return LogError(context, "Aborted as the signer already has an avatar at index #{Index}.", index);
             }
+
             sw.Stop();
             Log.Debug("CreateAvatar Get AgentAvatarStates: {Elapsed}", sw.Elapsed);
             sw.Restart();
@@ -161,23 +163,27 @@ namespace Nekoyume.Action
                 name
             );
 
-            if (GameConfig.IsEditor)
-            {
-                var costumeItemSheet = ctx.PreviousStates.GetSheet<CostumeItemSheet>();
-                var equipmentItemSheet = ctx.PreviousStates.GetSheet<EquipmentItemSheet>();
-                AddItemsForTest(avatarState, ctx.Random, costumeItemSheet, materialItemSheet, equipmentItemSheet);
-            }
+            var costumeItemSheet = ctx.PreviousStates.GetSheet<CostumeItemSheet>();
+            var equipmentItemSheet = ctx.PreviousStates.GetSheet<EquipmentItemSheet>();
+            var equipmentItemRecipeSheet = ctx.PreviousStates.GetSheet<EquipmentItemRecipeSheet>();
+            var subRecipeSheet = ctx.PreviousStates.GetSheet<EquipmentItemSubRecipeSheet>();
+            var optionSheet = ctx.PreviousStates.GetSheet<EquipmentItemOptionSheet>();
+            var skillSheet = ctx.PreviousStates.GetSheet<SkillSheet>();
+            AddItemsForTest(avatarState, ctx.Random, costumeItemSheet, materialItemSheet, equipmentItemSheet,
+                equipmentItemRecipeSheet, subRecipeSheet, optionSheet, skillSheet);
 
             return avatarState;
         }
 
-        private static void AddItemsForTest(
-            AvatarState avatarState,
+        private static void AddItemsForTest(AvatarState avatarState,
             IRandom random,
             CostumeItemSheet costumeItemSheet,
             MaterialItemSheet materialItemSheet,
-            EquipmentItemSheet equipmentItemSheet
-        )
+            EquipmentItemSheet equipmentItemSheet,
+            EquipmentItemRecipeSheet equipmentItemRecipeSheet,
+            EquipmentItemSubRecipeSheet subRecipeSheet,
+            EquipmentItemOptionSheet optionSheet,
+            SkillSheet skillSheet)
         {
             foreach (var row in costumeItemSheet.OrderedList)
             {
@@ -186,14 +192,44 @@ namespace Nekoyume.Action
 
             foreach (var row in materialItemSheet.OrderedList)
             {
-                avatarState.inventory.AddItem(ItemFactory.CreateMaterial(row), 10);
+                avatarState.inventory.AddItem(ItemFactory.CreateMaterial(row), 9999);
             }
 
-            foreach (var row in equipmentItemSheet.OrderedList.Where(row =>
-                row.Id > GameConfig.DefaultAvatarWeaponId))
+            foreach (var row in equipmentItemRecipeSheet.Values)
             {
-                var itemId = random.GenerateRandomGuid();
-                avatarState.inventory.AddItem(ItemFactory.CreateItemUsable(row, itemId, default));
+                var equipmentRow = equipmentItemSheet.Values.First(r => r.Id == row.ResultEquipmentId);
+                //서브레시피 아이디가 없는 경우엔 옵션(스킬, 스탯)이 없는 케이스라 미리 만들어두지 않음
+                if (row.SubRecipeIds.Any())
+                {
+                    var subRecipes =
+                        subRecipeSheet.Values.Where(r => row.SubRecipeIds.Contains(r.Id));
+                    foreach (var subRecipe in subRecipes)
+                    {
+                        var itemId = random.GenerateRandomGuid();
+                        var equipment = ItemFactory.CreateItemUsable(equipmentRow, itemId, default);
+                        var optionIds = subRecipe.Options.Select(r => r.Id);
+                        var optionRows =
+                            optionSheet.Values.Where(r => optionIds.Contains(r.Id));
+                        foreach (var optionRow in optionRows)
+                        {
+                            if (optionRow.StatType != StatType.NONE)
+                            {
+                                var statMap = CombinationEquipment.GetStat(optionRow, random);
+                                equipment.StatsMap.AddStatAdditionalValue(statMap.StatType, statMap.Value);
+                            }
+                            else
+                            {
+                                var skill = CombinationEquipment.GetSkill(optionRow, skillSheet, random);
+                                if (!(skill is null))
+                                {
+                                    equipment.Skills.Add(skill);
+                                }
+                            }
+                        }
+
+                        avatarState.inventory.AddItem(equipment);
+                    }
+                }
             }
         }
     }

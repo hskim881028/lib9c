@@ -2,11 +2,7 @@ namespace Nekoyume
 {
     public static class GameConfig
     {
-#if UNITY_EDITOR
-        public const bool IsEditor = true;
-#else
         public const bool IsEditor = false;
-#endif
 
         public const int SlotCount = 3;
         public const float WaitSeconds = 180f;
@@ -27,7 +23,7 @@ namespace Nekoyume
         public const int DefaultAvatarWeaponId = 10100000;
         public const int DefaultAvatarArmorId = 10200000;
 
-        public const int DailyRewardInterval = 1700;
+        public const int DailyRewardInterval = 20;
         public const int DailyArenaInterval = 500;
         public const int WeeklyArenaInterval = 8000 * 7;
 
