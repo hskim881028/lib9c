@@ -18,7 +18,7 @@
     <PackageReference Include="Libplanet" Version="0.10.0-dev.20201006075405" />
     <PackageReference Include="OptimizedPriorityQueue" Version="4.2.0" />
     <PackageReference Include="Serilog" Version="2.9.0" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="8.1.0.13383">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="8.13.1.21947">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
